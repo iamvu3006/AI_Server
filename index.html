@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Giám Sát Cây Trồng</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a class="nav-item" data-tab="dashboard">Dashboard</a></li>
+                <li>
+                    <a href="#" id="viewNotifications">
+                        Xem Thông Báo
+                        <span id="notificationDot" class="notification-dot"></span>
+                    </a>
+                </li>
+                <li><a href="results.html">AI nhận dạng lá</a></li>
+                <li><a href="#" id="editThresholds">Chỉnh Sửa Ngưỡng</a></li>
+                <li><span id="connectionStatus" class="connection-status">Đã Kết Nối Với Thiết Bị.</span></li>
+            </  ul>
+        </nav>
+    </header>
+
+
+    <div id="dashboard" class="page-tab" style="display:block;">
+        <div class="main-content">
+            <h1>Giám Sát Cây Trồng</h1>
+
+            <div class="charts-container">
+                <div class="chart">
+                    <canvas id="temperatureChart" width="400" height="200"></canvas>
+                    <p>Nhiệt Độ (°C)</p>
+                    <div class="stats" id="tempStats">Giá trị hiện tại: -- | Min: -- | Max: -- | Trung bình: --</div>
+                </div>
+
+                <div class="chart">
+                    <canvas id="airHumidityChart" width="400" height="200"></canvas>
+                    <p>Độ Ẩm Không Khí (%)</p>
+                    <div class="stats" id="airHumStats">Giá trị hiện tại: -- | Min: -- | Max: -- | Trung bình: --</div>
+                </div>
+
+                <div class="chart">
+                    <canvas id="soilMoistureChart" width="400" height="200"></canvas>
+                    <p>Độ Ẩm Đất (%)</p>
+                    <div class="stats" id="soilMoistStats">Giá trị hiện tại: -- | Min: -- | Max: -- | Trung bình: --
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+
+                <label>Chế Độ Bơm: Tự Động</label>
+                <label class="switch">
+                    <input type="checkbox" id="pumpModeSwitch">
+                    <span class="slider"></span>
+                </label>
+
+                <label>Thủ Công</label>
+                <div class="manual-controls" id="manualControls">
+                    <button class="pump-btn pump-on" id="pumpOn">Bật Bơm</button>
+                    <button class="pump-btn pump-off" id="pumpOff">Tắt Bơm</button>
+                </div>
+            </div>
+
+
+            <div class="history-section">
+                <h2>Lịch Sử Dữ Liệu</h2>
+
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="openTab('sensorHistory')">Lịch Sử Cảm Biến</button>
+                    <button class="tab-btn" onclick="openTab('pumpHistory')">Lịch Sử Bơm</button>
+                </div>
+
+                <div class="filter-box">
+                    <label for="historyDate">Ngày:</label>
+                    <input type="date" id="historyDate" name="historyDate">
+
+                    <label for="historyStart">Từ giờ:</label>
+                    <input type="time" id="historyStart" name="historyStart">
+
+                    <label for="historyEnd">Đến giờ:</label>
+                    <input type="time" id="historyEnd" name="historyEnd">
+
+                    <button id="filterHistorySensor">Lọc</button>
+                </div>
+
+                <div id="sensorHistory" class="tab-content" style="display: block;">
+                    <table id="sensorHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Thời Gian</th>
+                                <th>Nhiệt Độ (°C)</th>
+                                <th>Độ Ẩm Không Khí (%)</th>
+                                <th>Độ Ẩm Đất (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="pumpHistory" class="tab-content" style="display: none;">
+                    <table id="pumpHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Thời Gian</th>
+                                <th>Hành Động</th>
+                                <th>Chế Độ</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                
+            </div>
+        </div>
+
+
+    </div>
+
+    <div id="aiTab" class="page-tab" style="display:none;">
+        <div id="aiContent">Đang tải...</div>
+    </div>
+
+
+    <!-- Modal chỉnh sửa ngưỡng -->
+    <div id="thresholdModal">
+        <div class="modal-content">
+            <span class="close" id="closeThresholdModal">&times;</span>
+            <h2>Chỉnh Sửa Ngưỡng Cảm Biến</h2>
+            <form id="thresholdForm">
+                <label>Độ Ẩm Đất Min (%):</label>
+                <input type="number" id="soilMoistMin" name="soilMoistMin" value="">
+                <label>Độ Ẩm Đất Max (%):</label>
+                <input type="number" id="soilMoistMax" name="soilMoistMax" value="">
+                <label>Nhiệt Độ Min (°C):</label>
+                <input type="number" id="tempMin" name="tempMin" value="">
+                <label>Nhiệt Độ Max (°C):</label>
+                <input type="number" id="tempMax" name="tempMax" value="">
+                <label>Độ Ẩm Không Khí Min (%):</label>
+                <input type="number" id="airHumMin" name="airHumMin" value="">
+                <label>Độ Ẩm Không Khí Max (%):</label>
+                <input type="number" id="airHumMax" name="airHumMax" value="">
+
+                <button type="button" id="saveBtn">Lưu Thay Đổi</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal thông báo -->
+    <div id="notificationModal">
+        <div class="modal-content">
+            <span class="close" id="closeNotificationModal">&times;</span>
+            <h2>Thông Báo Hệ Thống</h2>
+            <ul class="notification-list" id="notificationList"></ul>
+        </div>
+    </div>
+
+    <!--Camera-->
+    <div id="cameraContainer">
+        <h2>Live từ ESP32-CAM</h2>
+        <img id="cameraStream" src="" alt="Camera sẽ hiện ở đây">
+        <p id="camStatus">Đang kết nối...</p>
+    </div>
+
+    <!--Toast-->
+    <div id="toast-container"></div>
+
+    <script type="module" src="../js/index.js"></script>
+</body>
+
+
+
+</html>

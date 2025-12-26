@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.env
+
+# Data / models
+final_model.pth
+*.pth
+received_images/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
