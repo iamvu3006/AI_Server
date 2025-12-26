@@ -14,6 +14,10 @@ from sse import init_sse
 app = Flask(__name__)
 CORS(app)
 
+# Flask: Framework web Python để tạo REST API
+# CORS: Cho phép ESP32 (thiết bị khác domain) gọi API
+# UPLOAD_FOLDER: Lưu trữ ảnh đã nhận để debug/xem lại
+
 init_sse(app)
 
 # Create folders for storing images
@@ -33,17 +37,26 @@ def create_model():
         nn.Linear(512, 1)
     )
     return model
+# ResNet18: Mạng CNN 18 layers, đã được chứng minh hiệu quả cho phân loại ảnh
+# Transfer Learning: Dùng kiến trúc ResNet nhưng train lại FC layer
+# Binary Classification:
+
+# Output = 1 neuron (không phải 2)
+# Qua Sigmoid → xác suất [0, 1]
+# ≥0.5 = Healthy, <0.5 = Diseased
 
 def get_transform():
     """Image preprocessing for inference"""
     return transforms.Compose([
-        transforms.Resize(IMG_SIZE),
-        transforms.ToTensor(),
+        transforms.Resize(IMG_SIZE), # Resize về kích thước chuẩn
+        transforms.ToTensor(), # Chuyển sang tensor [0,1]
         transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],
+            mean=[0.485, 0.456, 0.406], # ImageNet standard
             std=[0.229, 0.224, 0.225]
         )
     ])
+# Đây là chuẩn của ImageNet dataset (ResNet được pretrain trên đó)
+# Giúp model hội tụ nhanh hơn và chính xác hơn
 
 def load_model():
     """Load the trained PyTorch model"""
@@ -94,13 +107,14 @@ def preprocess_image(image_data):
 def predict_leaf(image_data):
     """Make prediction on leaf image"""
     try:
+        # 1. Preprocess image
         img_tensor = preprocess_image(image_data)
         if img_tensor is None:
             return None
-        
-        img_tensor = img_tensor.to(device)
-        
-        with torch.no_grad():
+        img_tensor = img_tensor.to(device) # Chuyển lên GPU nếu có
+
+        # 2. Inference
+        with torch.no_grad(): # Không tính gradient (tiết kiệm RAM)
             output = model(img_tensor)
             probability = torch.sigmoid(output).item()
         
@@ -135,6 +149,10 @@ def predict_leaf(image_data):
         import traceback
         traceback.print_exc()
         return None
+# Giải thích:
+# torch.no_grad(): Tắt autograd → nhanh hơn, ít RAM hơn
+# Sigmoid(output): Chuyển output [-∞, +∞] → [0, 1]
+# Confidence: Luôn trả về confidence của class được chọn (>50%)
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -145,6 +163,7 @@ def health_check():
         'framework': 'PyTorch',
         'timestamp': datetime.now().isoformat()
     }), 200
+#Mục đích: Kiểm tra server còn sống không, model đã load chưa
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -173,6 +192,9 @@ def predict():
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+# Hỗ trợ 2 định dạng:
+# Form-data file: Upload trực tiếp file ảnh
+# Base64 string: Dùng cho web browser (Canvas → base64)
 
 @app.route('/predict_esp32', methods=['POST'])
 def predict_esp32():
@@ -213,6 +235,11 @@ def predict_esp32():
     except Exception as e:
         print(f"❌ ESP32 error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+# Điểm đặc biệt:
+
+# Raw binary: ESP32 gửi trực tiếp byte stream JPEG (không qua encoding)
+# Filename có metadata: Dễ debug, biết ngay kết quả dự đoán
+# Response nhỏ gọn: ESP32 RAM hạn chế
 
 @app.route('/classes', methods=['GET'])
 def get_classes():
@@ -243,6 +270,7 @@ def list_images():
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+# Mục đích: Web dashboard có thể xem lại lịch sử ảnh đã chụp
 
 if __name__ == '__main__':
     print("🚀 Starting AI Server (PyTorch ResNet18)...")
